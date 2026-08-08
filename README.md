@@ -226,12 +226,6 @@ every API request is authorized server-side.
 
 ---
 
-## Screenshots
-
-*Coming soon — add login, dashboard and submission views here.*
-
----
-
 ## License
 
 Copyright © 2026. Built as a portfolio project.
