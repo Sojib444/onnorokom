@@ -231,8 +231,8 @@ docker-compose.yml                      postgres + api + frontend with health ch
 docker-compose.prod.yml                 production stack for AWS EC2 (GHCR images)
 .env.example                            Environment template (DB, JWT, ports) - never commit .env
 .github/workflows/ci-cd.yml             CI (build/test) + CD (GHCR images -> SSH deploy)
-deploy/ec2-setup.sh                     one-time EC2 bootstrap (Docker + .env generation)
-deploy/ec2-update.sh                    remote deploy step (pull images + health wait)
+deploy/ec2-provision.sh               idempotent host bootstrap (Docker + .env generation)
+deploy/ec2-update.sh                   remote deploy step (pull images + health wait)
 docs/IMPLEMENTATION_PLAN.md             Design, database schema and phase-by-phase plan
 ```
 
@@ -358,13 +358,18 @@ push to main ─► GitHub Actions
                  │          service container) + Angular production build
                  └─ deploy : build api + frontend images, push to GHCR
                              (ghcr.io/sojib444/onnorokom/{api,frontend}),
-                             then SSH to EC2 and run docker compose up
+                             then SSH to EC2, auto-provision the host, and run
+                             docker compose up
 ```
 
 - **`docker-compose.prod.yml`** is the production stack. It pulls prebuilt images
   from GHCR (no build context on the server), reads configuration from
-  `/opt/onnorokom/.env`, maps nginx to port 80, and keeps the API on a loopback-only
+  `~/onnorokom/.env`, maps nginx to port 80, and keeps the API on a loopback-only
   port so only the frontend is internet-facing.
+- **Provisioning is automatic.** `deploy/ec2-provision.sh` runs on the host before
+  every deploy and is idempotent: it installs Docker only if missing and generates
+  `~/onnorokom/.env` (random Postgres password + JWT secret) only once. A brand-new
+  instance needs nothing but the SSH key and port 80 open.
 - **Migrations and seeding** run on API startup (`Program.cs`), so a deploy is just
   "pull the new image and restart". The database and uploads live on persistent
   volumes that survive redeploys.
@@ -373,7 +378,8 @@ push to main ─► GitHub Actions
 
 ### One-time setup
 
-**1. EC2 instance** (Ubuntu 24.04, any size; open **TCP 80** in the security group):
+**1. EC2 instance** (Ubuntu 24.04, any size; open **TCP 80** and **TCP 22** in the
+security group):
 
 - When launching the instance, create a **key pair** and download the `.pem` file —
   this is the SSH identity the pipeline uses to deploy (e.g.
@@ -390,15 +396,11 @@ push to main ─► GitHub Actions
   The connection can then be tested with
   `ssh -i home_barud_aws_dev.pem ubuntu@<EC2-PUBLIC-IP>`.
 
-```bash
-# SSH in, then bootstrap the host once:
-sudo bash deploy/ec2-setup.sh
-```
-
-The script installs Docker, creates `/opt/onnorokom`, and generates a strong `.env`
-(random Postgres password and JWT secret). If the GitHub repo is **private**, also add
-`GHCR_USER` and `GHCR_TOKEN` (fine-grained PAT with `read:packages`) to
-`/opt/onnorokom/.env` so the host can pull the images.
+> No software needs to be installed on the instance beforehand — the deploy job
+> installs Docker and generates the configuration automatically on first deploy.
+> If the GitHub repo is **private**, the host also needs `GHCR_USER` and
+> `GHCR_TOKEN` (a fine-grained PAT with `read:packages`) in `~/onnorokom/.env` so
+> it can pull the images.
 
 **2. GitHub repository secrets** (Settings → Secrets and variables → Actions):
 
@@ -410,14 +412,14 @@ The script installs Docker, creates `/opt/onnorokom`, and generates a strong `.e
 | `AWS_EC2_PORT` | SSH port (optional, defaults to 22) |
 
 **3. Push to `main`.** The pipeline runs CI, builds both images, pushes them to
-GitHub Container Registry, copies `docker-compose.prod.yml` and
-`deploy/ec2-update.sh` to the host, and starts the stack. The app is then live at
+GitHub Container Registry, copies `docker-compose.prod.yml` and the `deploy/` scripts
+to the host, provisions it, and starts the stack. The app is then live at
 `http://<EC2-PUBLIC-IP>/`.
 
 ### Day-to-day operations
 
 ```bash
-# On the EC2 host, from /opt/onnorokom:
+# On the EC2 host, from ~/onnorokom:
 docker compose -f docker-compose.prod.yml ps             # status incl. health
 docker compose -f docker-compose.prod.yml logs -f api    # API logs
 docker compose -f docker-compose.prod.yml logs -f frontend

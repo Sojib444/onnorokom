@@ -134,10 +134,10 @@ jobs:
           username: ${{ secrets.AWS_EC2_USER }}
           key: ${{ secrets.AWS_EC2_SSH_KEY }}
           port: ${{ secrets.AWS_EC2_PORT || 22 }}
-          source: "docker-compose.prod.yml,deploy/ec2-update.sh"
-          target: /opt/onnorokom
+          source: "docker-compose.prod.yml,deploy/ec2-provision.sh,deploy/ec2-update.sh"
+          target: /home/${{ secrets.AWS_EC2_USER }}/onnorokom
 
-      - name: Pull images and start the stack on EC2
+      - name: Provision host and start the stack on EC2
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
@@ -146,5 +146,6 @@ jobs:
           port: ${{ secrets.AWS_EC2_PORT || 22 }}
           script: |
             set -euo pipefail
-            cd /opt/onnorokom
-            bash deploy/ec2-update.sh
+            cd ~/onnorokom
+            bash deploy/ec2-provision.sh
+            sudo bash deploy/ec2-update.sh
