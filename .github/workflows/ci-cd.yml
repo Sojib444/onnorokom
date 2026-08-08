@@ -128,7 +128,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Copy production files to EC2
-        uses: appleboy/scp-action@v0.1.10
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.AWS_EC2_HOST }}
           username: ${{ secrets.AWS_EC2_USER }}
