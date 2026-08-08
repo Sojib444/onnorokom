@@ -1,0 +1,150 @@
+name: CI/CD
+
+# Continuous integration on every pull request; continuous deployment to the AWS EC2
+# host whenever main gets a push:
+#
+#   ci      - build the .NET solution, run unit + integration tests (against a real
+#             PostgreSQL started as a service container), build the Angular bundle.
+#   deploy  - build the API and frontend images, push them to GitHub Container
+#             Registry, then SSH to EC2 and run docker compose up with the new images.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   AWS_EC2_HOST     public IP or DNS of the EC2 instance
+#   AWS_EC2_USER     SSH user (usually "ubuntu")
+#   AWS_EC2_SSH_KEY  private key of the SSH key pair registered with the instance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  NODE_VERSION: "24"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  ci:
+    name: Build & test
+    runs-on: ubuntu-latest
+
+    # The integration tests (tests/AssignmentManagement.IntegrationTests/TestApiFactory.cs)
+    # connect to Host=localhost;Port=5432 as user "postgres" with password
+    # "DevOnly_Change_123!" - the service container below matches exactly.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: DevOnly_Change_123!
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore and build
+        run: dotnet build AssignmentManagement.slnx -c Release
+
+      - name: Run unit and integration tests
+        run: dotnet test AssignmentManagement.slnx -c Release --no-build
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/assignment-management-ui/package-lock.json
+
+      - name: Build Angular frontend
+        working-directory: frontend/assignment-management-ui
+        run: |
+          npm ci
+          npm run build
+
+  deploy:
+    name: Deploy to AWS EC2
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # GHCR image names must be lowercase; the repository owner can contain capitals.
+      - name: Resolve GHCR image names
+        run: |
+          echo "GHCR_API=ghcr.io/${GITHUB_REPOSITORY,,}/api" >> "$GITHUB_ENV"
+          echo "GHCR_FRONTEND=ghcr.io/${GITHUB_REPOSITORY,,}/frontend" >> "$GITHUB_ENV"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backend.Dockerfile
+          push: true
+          tags: |
+            ${{ env.GHCR_API }}:latest
+            ${{ env.GHCR_API }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend.Dockerfile
+          push: true
+          tags: |
+            ${{ env.GHCR_FRONTEND }}:latest
+            ${{ env.GHCR_FRONTEND }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Copy production files to EC2
+        uses: appleboy/scp-action@v0.1.10
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USER }}
+          key: ${{ secrets.AWS_EC2_SSH_KEY }}
+          port: ${{ secrets.AWS_EC2_PORT || 22 }}
+          source: "docker-compose.prod.yml,deploy/ec2-update.sh"
+          target: /opt/onnorokom
+
+      - name: Pull images and start the stack on EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.AWS_EC2_HOST }}
+          username: ${{ secrets.AWS_EC2_USER }}
+          key: ${{ secrets.AWS_EC2_SSH_KEY }}
+          port: ${{ secrets.AWS_EC2_PORT || 22 }}
+          script: |
+            set -euo pipefail
+            cd /opt/onnorokom
+            bash deploy/ec2-update.sh
