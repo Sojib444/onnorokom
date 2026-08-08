@@ -1,0 +1,104 @@
+<section class="page">
+  @if (assignment(); as assignment) {
+    <div class="page-header">
+      <div>
+        <h2>Submissions — {{ assignment.title }}</h2>
+        <p class="muted">
+          {{ assignment.className }} · {{ assignment.subjectName }} · due
+          {{ assignment.deadline | date: 'medium' }} · maximum
+          {{ assignment.maximumMarks | number: '1.0-2' }}
+        </p>
+      </div>
+      <a class="btn btn-ghost" routerLink="/teacher/assignments">Back</a>
+    </div>
+  }
+
+  @if (errorMessage(); as message) {
+    <app-error [message]="message" [retryable]="true" (retry)="load()" />
+  }
+
+  @if (loading()) {
+    <app-loading />
+  } @else if (items().length === 0) {
+    <app-empty message="No submissions yet." />
+  } @else {
+    @for (submission of items(); track submission.id) {
+      <div class="card submission">
+        <div class="submission-header">
+          <div>
+            <strong>{{ submission.studentName || 'Unknown student' }}</strong>
+            <span class="status" [class]="submission.status | statusClass">{{ submission.status | statusLabel }}</span>
+          </div>
+          <div class="submission-meta">
+            @if (submission.marks !== null) {
+              <span>Marks: <strong>{{ submission.marks | number: '1.0-2' }}</strong></span>
+            }
+            @if (submission.submittedAt) {
+              <span>Submitted {{ submission.submittedAt | date: 'medium' }}</span>
+            }
+          </div>
+        </div>
+
+        <p class="submission-answer">{{ submission.answer }}</p>
+
+        @if (submission.feedback) {
+          <p class="submission-feedback"><strong>Feedback:</strong> {{ submission.feedback }}</p>
+        }
+
+        @if (submission.attachments.length > 0) {
+          <div class="attachments">
+            <span class="field-hint">Attachments:</span>
+            @for (attachment of submission.attachments; track attachment.id) {
+              <button type="button" class="btn btn-small" (click)="onDownloadAttachment(submission, attachment)">
+                {{ attachment.fileName }} ({{ attachment.size | fileSize }})
+              </button>
+            }
+          </div>
+        }
+
+        @if (isTeacher === 'Teacher') {
+          @if (gradingId() === submission.id) {
+            <form class="grade-form" [formGroup]="gradeForm" (ngSubmit)="onGrade(submission)">
+              <div class="form-grid">
+                <label class="field">
+                  <span>Marks</span>
+                  <input type="number" min="0" step="0.01" formControlName="marks" placeholder="0" />
+                  @if (gradeFieldHasError('marks')) {
+                    <span class="field-error">Marks must be zero or more.</span>
+                  }
+                </label>
+                <label class="field">
+                  <span>Feedback</span>
+                  <input formControlName="feedback" placeholder="Optional feedback" />
+                  @if (gradeFieldHasError('feedback')) {
+                    <span class="field-error">Feedback is at most 2000 characters.</span>
+                  }
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-primary" [disabled]="saving()">
+                  {{ saving() ? 'Saving…' : submission.marks === null ? 'Grade' : 'Update grade' }}
+                </button>
+                <button type="button" class="btn btn-ghost" (click)="cancelGrading()">Cancel</button>
+              </div>
+            </form>
+          } @else {
+            <div class="form-actions">
+              <button type="button" class="btn btn-small" (click)="beginGrading(submission)">
+                {{ submission.marks === null ? 'Grade' : 'Update grade' }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-small"
+                [disabled]="saving()"
+                (click)="onReturnForRevision(submission)"
+              >
+                Return for revision
+              </button>
+            </div>
+          }
+        }
+      </div>
+    }
+  }
+</section>

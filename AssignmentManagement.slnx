@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AssignmentManagement.Api/AssignmentManagement.Api.csproj" />
+    <Project Path="src/AssignmentManagement.Application/AssignmentManagement.Application.csproj" />
+    <Project Path="src/AssignmentManagement.Domain/AssignmentManagement.Domain.csproj" />
+    <Project Path="src/AssignmentManagement.Infrastructure/AssignmentManagement.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AssignmentManagement.IntegrationTests/AssignmentManagement.IntegrationTests.csproj" />
+    <Project Path="tests/AssignmentManagement.UnitTests/AssignmentManagement.UnitTests.csproj" />
+  </Folder>
+</Solution>

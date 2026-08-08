@@ -1,0 +1,79 @@
+<section class="page">
+  <div class="page-header">
+    <div>
+      <h2>{{ isEditing() ? 'Edit assignment' : 'New assignment' }}</h2>
+      <p class="muted">Assignments are saved as drafts until you publish them.</p>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <app-loading message="Loading your allocations…" />
+  } @else {
+    @if (errorMessage(); as message) {
+      <app-error [message]="message" />
+    }
+
+    <form class="card form-card" [formGroup]="form" (ngSubmit)="onSubmit()">
+      @if (loadingAssignment()) {
+        <app-loading message="Loading assignment…" />
+      }
+
+      <label class="field">
+        <span>Class and subject</span>
+        <select formControlName="pairId">
+          <option value="">Select a class and subject</option>
+          @for (pair of pairs(); track pair.id) {
+            <option [value]="pair.id">{{ pair.className }} — {{ pair.subjectName }}</option>
+          }
+        </select>
+        @if (fieldHasError('pairId')) {
+          <span class="field-error">Choose the class and subject for this assignment.</span>
+        }
+        @if (pairs().length === 0) {
+          <span class="field-hint">You have no teaching allocations. Ask an administrator to allocate you.</span>
+        }
+      </label>
+
+      <label class="field">
+        <span>Title</span>
+        <input formControlName="title" placeholder="e.g. Algebra problem set 3" />
+        @if (fieldHasError('title')) {
+          <span class="field-error">Title is required and at most 200 characters.</span>
+        }
+      </label>
+
+      <label class="field">
+        <span>Description</span>
+        <textarea formControlName="description" rows="5" placeholder="What should students do?"></textarea>
+        @if (fieldHasError('description')) {
+          <span class="field-error">Description is at most 4000 characters.</span>
+        }
+      </label>
+
+      <div class="form-grid">
+        <label class="field">
+          <span>Deadline</span>
+          <input type="datetime-local" formControlName="deadline" />
+          @if (fieldHasError('deadline')) {
+            <span class="field-error">Choose a deadline in the future.</span>
+          }
+        </label>
+
+        <label class="field">
+          <span>Maximum marks</span>
+          <input type="number" min="1" step="0.01" formControlName="maximumMarks" placeholder="100" />
+          @if (fieldHasError('maximumMarks')) {
+            <span class="field-error">Maximum marks must be at least 1.</span>
+          }
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : isEditing() ? 'Save changes' : 'Save draft' }}
+        </button>
+        <button type="button" class="btn btn-ghost" (click)="onCancel()">Cancel</button>
+      </div>
+    </form>
+  }
+</section>

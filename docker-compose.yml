@@ -1,0 +1,92 @@
+name: assignment-management
+
+# Assignment & Submission Management System - full local stack.
+#   docker compose up --build     start everything
+#   docker compose down           stop everything (keeps the database volume)
+#   docker compose down -v        stop and delete the database + uploads volumes
+#
+# Entry point: http://localhost:8080  (frontend; /api proxied to the api service)
+# Swagger:     http://localhost:5105/swagger
+# Postgres:    localhost:5433  (host port set via POSTGRES_PORT; default 5433)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      # Host port configurable: a local PostgreSQL usually owns 5432, so the default
+      # mapping is 5433 to avoid a collision. Set POSTGRES_PORT=5432 to use 5432.
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready ships with the image; $$ escapes the compose variable.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - app
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # Host must be the compose service name, not localhost.
+      ConnectionStrings__DefaultConnection: ${DB_CONNECTION_STRING:?DB_CONNECTION_STRING must be set in .env}
+      Jwt__Secret: ${JWT_SECRET:?JWT_SECRET must be set in .env (min 32 chars)}
+      Jwt__Issuer: ${JWT_ISSUER:-AssignmentManagement.Api}
+      Jwt__Audience: ${JWT_AUDIENCE:-AssignmentManagement.Client}
+      Jwt__ExpiresInMinutes: ${JWT_EXPIRES_MINUTES:-60}
+      Seed__RunOnStartup: "true"
+      FileStorage__RootPath: /app/uploads
+      Api__EnableSwagger: "true"
+      # Browser CORS allow-list (comma-separated). The Docker frontend on :8080 talks
+      # to /api same-origin through nginx (no CORS involved); these origins only matter
+      # for direct calls to the API at :5105, e.g. from the Angular dev server or a
+      # Swagger page hosted on another origin.
+      Cors__AllowedOrigins: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200,http://localhost:8080}
+    ports:
+      - "${API_PORT:-5105}:8080"
+    volumes:
+      - uploads:/app/uploads
+    healthcheck:
+      # curl is installed in the runtime image (see docker/backend.Dockerfile).
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - app
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    networks:
+      - app
+
+volumes:
+  postgres-data:
+  uploads:
+
+networks:
+  app:

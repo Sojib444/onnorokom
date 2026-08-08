@@ -1,0 +1,47 @@
+<section class="page">
+  <div class="page-header">
+    <div>
+      <h2>Assignments</h2>
+      <p class="muted">Every assignment across the institution.</p>
+    </div>
+  </div>
+
+  @if (errorMessage(); as message) {
+    <app-error [message]="message" [retryable]="true" (retry)="load()" />
+  }
+
+  @if (loading()) {
+    <app-loading />
+  } @else if (items().length === 0) {
+    <app-empty message="No assignments have been created." />
+  } @else {
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Class</th>
+          <th>Subject</th>
+          <th>Deadline</th>
+          <th>Marks</th>
+          <th>Status</th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (assignment of items(); track assignment.id) {
+          <tr>
+            <td>{{ assignment.title }}</td>
+            <td>{{ assignment.className }}</td>
+            <td>{{ assignment.subjectName }}</td>
+            <td>{{ assignment.deadline | date: 'medium' }}</td>
+            <td>{{ assignment.maximumMarks | number: '1.0-2' }}</td>
+            <td><span class="status" [class]="assignment.status | statusClass">{{ assignment.status | statusLabel }}</span></td>
+            <td class="col-actions">
+              <a class="btn btn-small" routerLink="/admin/assignments/{{ assignment.id }}/submissions">Submissions</a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

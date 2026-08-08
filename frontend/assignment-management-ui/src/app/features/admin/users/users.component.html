@@ -1,0 +1,103 @@
+<section class="page">
+  <div class="page-header">
+    <div>
+      <h2>Users</h2>
+      <p class="muted">Accounts for administrators, teachers and students.</p>
+    </div>
+    <button type="button" class="btn btn-primary" (click)="beginCreate()">New user</button>
+  </div>
+
+  <form class="card form-card" [formGroup]="form" (ngSubmit)="onSubmit()">
+    <h3>{{ isEditing() ? 'Edit user' : 'New user' }}</h3>
+
+    <div class="form-grid">
+      <label class="field">
+        <span>Full name</span>
+        <input formControlName="fullName" placeholder="e.g. Ayesha Rahman" />
+        @if (fieldHasError('fullName')) {
+          <span class="field-error">Name is required and at most 100 characters.</span>
+        }
+      </label>
+
+      <label class="field">
+        <span>Email</span>
+        <input formControlName="email" placeholder="you@example.com" />
+        @if (fieldHasError('email')) {
+          <span class="field-error">Enter a valid email address.</span>
+        }
+      </label>
+
+      <label class="field">
+        <span>{{ isEditing() ? 'New password (optional)' : 'Password' }}</span>
+        <input type="password" formControlName="password" autocomplete="new-password" placeholder="At least 8 characters" />
+        @if (fieldHasError('password')) {
+          <span class="field-error">Password must be at least 8 characters.</span>
+        }
+      </label>
+
+      <label class="field">
+        <span>Role</span>
+        <select formControlName="role">
+          <option value="Admin">Admin</option>
+          <option value="Teacher">Teacher</option>
+          <option value="Student">Student</option>
+        </select>
+      </label>
+
+      @if (form.get('role')?.value === 'Student') {
+        <label class="field">
+          <span>Class</span>
+          <select formControlName="classId">
+            <option [ngValue]="null">No class</option>
+            @for (item of classes(); track item.id) {
+              <option [ngValue]="item.id">{{ item.name }}</option>
+            }
+          </select>
+        </label>
+      }
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Saving…' : isEditing() ? 'Save changes' : 'Create user' }}
+      </button>
+      <button type="button" class="btn btn-ghost" (click)="cancelForm()">Cancel</button>
+    </div>
+  </form>
+
+  @if (errorMessage(); as message) {
+    <app-error [message]="message" [retryable]="true" (retry)="load()" />
+  }
+
+  @if (loading()) {
+    <app-loading />
+  } @else if (items().length === 0) {
+    <app-empty message="No users yet. Create the first one above." />
+  } @else {
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Class</th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (user of items(); track user.id) {
+          <tr>
+            <td>{{ user.fullName }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.role }}</td>
+            <td class="muted">{{ user.className || '—' }}</td>
+            <td class="col-actions">
+              <button type="button" class="btn btn-small" (click)="beginEdit(user)">Edit</button>
+              <button type="button" class="btn btn-small btn-danger" (click)="onDelete(user)">Delete</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

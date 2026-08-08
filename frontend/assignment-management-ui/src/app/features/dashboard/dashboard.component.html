@@ -1,0 +1,43 @@
+<section class="page">
+  @if (currentUser(); as user) {
+    <div class="card dashboard-hero">
+      <h2>Welcome back, {{ user.fullName }}</h2>
+      <p class="muted">You are signed in as a {{ user.role | lowercase }}.</p>
+    </div>
+  }
+
+  @if (errorMessage(); as message) {
+    <app-error [message]="message" [retryable]="true" (retry)="load()" />
+  }
+
+  @if (loading()) {
+    <app-loading />
+  }
+
+  @if (stats().length > 0) {
+    <div class="stats-grid">
+      @for (stat of stats(); track stat.label) {
+        @if (stat.link) {
+          <a class="card stat-card" routerLink="{{ stat.link }}">
+            <span class="stat-value">{{ stat.value }}</span>
+            <span class="stat-label">{{ stat.label }}</span>
+          </a>
+        } @else {
+          <div class="card stat-card">
+            <span class="stat-value">{{ stat.value }}</span>
+            <span class="stat-label">{{ stat.label }}</span>
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <div class="card quick-links">
+    <h3>Quick links</h3>
+    <div class="quick-links-grid">
+      @for (link of quickLinks(); track link.path) {
+        <a class="quick-link" routerLink="{{ link.path }}">{{ link.label }}</a>
+      }
+    </div>
+  </div>
+</section>

@@ -1,0 +1,79 @@
+<section class="page">
+  <div class="page-header">
+    <div>
+      <h2>My assignments</h2>
+      <p class="muted">Set work for your allocated classes and subjects.</p>
+    </div>
+    <button type="button" class="btn btn-primary" (click)="onCreate()">New assignment</button>
+  </div>
+
+  @if (errorMessage(); as message) {
+    <app-error [message]="message" [retryable]="true" (retry)="load()" />
+  }
+
+  @if (loading()) {
+    <app-loading />
+  } @else if (items().length === 0) {
+    <app-empty message="You have not created any assignments yet." />
+  } @else {
+    @if (drafts().length > 0) {
+      <h3 class="group-title">Drafts</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Class</th>
+            <th>Subject</th>
+            <th>Deadline</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (assignment of drafts(); track assignment.id) {
+            <tr>
+              <td>{{ assignment.title }}</td>
+              <td>{{ assignment.className }}</td>
+              <td>{{ assignment.subjectName }}</td>
+              <td>{{ assignment.deadline | date: 'medium' }}</td>
+              <td class="col-actions">
+                <a class="btn btn-small" routerLink="/teacher/assignments/{{ assignment.id }}/edit">Edit</a>
+                <button type="button" class="btn btn-small btn-primary" [disabled]="busyId() === assignment.id" (click)="onPublish(assignment)">Publish</button>
+                <button type="button" class="btn btn-small btn-danger" [disabled]="busyId() === assignment.id" (click)="onDelete(assignment)">Delete</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    @if (published().length > 0) {
+      <h3 class="group-title">Published</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Class</th>
+            <th>Subject</th>
+            <th>Deadline</th>
+            <th>Maximum marks</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (assignment of published(); track assignment.id) {
+            <tr>
+              <td>{{ assignment.title }}</td>
+              <td>{{ assignment.className }}</td>
+              <td>{{ assignment.subjectName }}</td>
+              <td>{{ assignment.deadline | date: 'medium' }}</td>
+              <td>{{ assignment.maximumMarks | number: '1.0-2' }}</td>
+              <td class="col-actions">
+                <a class="btn btn-small" routerLink="/teacher/assignments/{{ assignment.id }}/submissions">Submissions</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  }
+</section>

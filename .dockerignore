@@ -1,0 +1,28 @@
+# Keep the Docker build context small and free of secrets.
+# Root of the context is the repository root (see docker-compose.yml build.context).
+
+# VCS
+.git
+.vs
+
+# .NET build output
+**/bin
+**/obj
+
+# Node / Angular
+frontend/**/node_modules
+frontend/**/dist
+frontend/**/.angular
+frontend/**/coverage
+
+# Test output
+tests/**/TestResults
+
+# Secrets and local overrides - never baked into images
+.env
+.env.*
+!.env.example
+**/appsettings.*.local.json
+
+# Runtime data
+uploads

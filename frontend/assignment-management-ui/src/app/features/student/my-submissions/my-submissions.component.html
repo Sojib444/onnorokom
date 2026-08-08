@@ -1,0 +1,45 @@
+<section class="page">
+  <div class="page-header">
+    <div>
+      <h2>My submissions</h2>
+      <p class="muted">Your answers, grades and feedback.</p>
+    </div>
+  </div>
+
+  @if (errorMessage(); as message) {
+    <app-error [message]="message" [retryable]="true" (retry)="load()" />
+  }
+
+  @if (loading()) {
+    <app-loading />
+  } @else if (items().length === 0) {
+    <app-empty message="You have not submitted anything yet." />
+  } @else {
+    @for (submission of items(); track submission.id) {
+      <div class="card submission">
+        <div class="submission-header">
+          <div>
+            <a class="assignment-link" routerLink="/student/assignments/{{ submission.assignmentId }}">
+              <strong>{{ submission.assignmentTitle || 'Assignment' }}</strong>
+            </a>
+            <span class="status" [class]="submission.status | statusClass">{{ submission.status | statusLabel }}</span>
+          </div>
+          <div class="submission-meta">
+            @if (submission.marks !== null) {
+              <span>Marks: <strong>{{ submission.marks | number: '1.0-2' }}</strong></span>
+            }
+            @if (submission.submittedAt) {
+              <span>Submitted {{ submission.submittedAt | date: 'medium' }}</span>
+            }
+          </div>
+        </div>
+
+        <p class="submission-answer">{{ submission.answer }}</p>
+
+        @if (submission.feedback) {
+          <p class="submission-feedback"><strong>Feedback:</strong> {{ submission.feedback }}</p>
+        }
+      </div>
+    }
+  }
+</section>

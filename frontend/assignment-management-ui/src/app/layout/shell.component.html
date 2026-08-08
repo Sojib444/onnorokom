@@ -1,0 +1,31 @@
+<header class="topbar">
+  <a class="brand" routerLink="/dashboard">
+    <span class="brand-mark" aria-hidden="true"></span>
+    Assignment Manager
+  </a>
+
+  <nav class="nav" aria-label="Main navigation">
+    @for (entry of navEntries(); track entry.path) {
+      <a
+        class="nav-link"
+        routerLink="{{ entry.path }}"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: entry.path === '/dashboard' }"
+      >
+        {{ entry.label }}
+      </a>
+    }
+  </nav>
+
+  <div class="user">
+    @if (currentUser(); as user) {
+      <span class="user-name">{{ user.fullName }}</span>
+      <span class="user-role">{{ user.role }}</span>
+    }
+    <button type="button" class="btn btn-ghost" (click)="onLogout()">Sign out</button>
+  </div>
+</header>
+
+<main class="content">
+  <router-outlet />
+</main>

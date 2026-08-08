@@ -1,0 +1,92 @@
+<section class="page">
+  <div class="page-header">
+    <div>
+      <h2>Teacher assignments</h2>
+      <p class="muted">Allocate a teacher to a class and subject pair so they can set work.</p>
+    </div>
+  </div>
+
+  <form class="card form-card" [formGroup]="form" (ngSubmit)="onSubmit()">
+    <h3>New allocation</h3>
+
+    <div class="form-grid form-grid-3">
+      <label class="field">
+        <span>Teacher</span>
+        <select formControlName="teacherId">
+          <option value="">Select a teacher</option>
+          @for (teacher of teachers(); track teacher.id) {
+            <option [value]="teacher.id">{{ teacher.fullName }} ({{ teacher.email }})</option>
+          }
+        </select>
+        @if (form.get('teacherId')?.invalid && form.get('teacherId')?.touched) {
+          <span class="field-error">Choose a teacher.</span>
+        }
+      </label>
+
+      <label class="field">
+        <span>Class</span>
+        <select formControlName="classId">
+          <option value="">Select a class</option>
+          @for (item of classes(); track item.id) {
+            <option [value]="item.id">{{ item.name }}</option>
+          }
+        </select>
+        @if (form.get('classId')?.invalid && form.get('classId')?.touched) {
+          <span class="field-error">Choose a class.</span>
+        }
+      </label>
+
+      <label class="field">
+        <span>Subject</span>
+        <select formControlName="subjectId">
+          <option value="">Select a subject</option>
+          @for (item of subjects(); track item.id) {
+            <option [value]="item.id">{{ item.name }} ({{ item.code }})</option>
+          }
+        </select>
+        @if (form.get('subjectId')?.invalid && form.get('subjectId')?.touched) {
+          <span class="field-error">Choose a subject.</span>
+        }
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Allocating…' : 'Allocate teacher' }}
+      </button>
+    </div>
+  </form>
+
+  @if (errorMessage(); as message) {
+    <app-error [message]="message" [retryable]="true" (retry)="load()" />
+  }
+
+  @if (loading()) {
+    <app-loading />
+  } @else if (items().length === 0) {
+    <app-empty message="No allocations yet. Use the form above." />
+  } @else {
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Teacher</th>
+          <th>Class</th>
+          <th>Subject</th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of items(); track item.id) {
+          <tr>
+            <td>{{ item.teacherName }}</td>
+            <td>{{ item.className }}</td>
+            <td>{{ item.subjectName }}</td>
+            <td class="col-actions">
+              <button type="button" class="btn btn-small btn-danger" (click)="onDelete(item)">Remove</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

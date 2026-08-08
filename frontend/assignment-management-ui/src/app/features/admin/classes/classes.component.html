@@ -1,0 +1,68 @@
+<section class="page">
+  <div class="page-header">
+    <div>
+      <h2>Classes</h2>
+      <p class="muted">Classes or courses that students belong to.</p>
+    </div>
+    <button type="button" class="btn btn-primary" (click)="beginCreate()">New class</button>
+  </div>
+
+  <form class="card form-card" [formGroup]="form" (ngSubmit)="onSubmit()">
+    <h3>{{ editingId() ? 'Edit class' : 'New class' }}</h3>
+
+    <label class="field">
+      <span>Name</span>
+      <input formControlName="name" placeholder="e.g. Grade 10 - Section A" />
+      @if (fieldHasError('name')) {
+        <span class="field-error">Name is required and at most 100 characters.</span>
+      }
+    </label>
+
+    <label class="field">
+      <span>Description</span>
+      <textarea formControlName="description" rows="3" placeholder="Optional notes"></textarea>
+      @if (fieldHasError('description')) {
+        <span class="field-error">Description is at most 500 characters.</span>
+      }
+    </label>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Saving…' : editingId() ? 'Save changes' : 'Create class' }}
+      </button>
+      <button type="button" class="btn btn-ghost" (click)="cancelForm()">Cancel</button>
+    </div>
+  </form>
+
+  @if (errorMessage(); as message) {
+    <app-error [message]="message" [retryable]="true" (retry)="load()" />
+  }
+
+  @if (loading()) {
+    <app-loading />
+  } @else if (items().length === 0) {
+    <app-empty message="No classes yet. Create the first one above." />
+  } @else {
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+          <th class="col-actions">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of items(); track item.id) {
+          <tr>
+            <td>{{ item.name }}</td>
+            <td class="muted">{{ item.description || '—' }}</td>
+            <td class="col-actions">
+              <button type="button" class="btn btn-small" (click)="beginEdit(item)">Edit</button>
+              <button type="button" class="btn btn-small btn-danger" (click)="onDelete(item)">Delete</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>

@@ -1,0 +1,90 @@
+<section class="page">
+  @if (assignment(); as assignment) {
+    <div class="page-header">
+      <div>
+        <h2>{{ assignment.title }}</h2>
+        <p class="muted">
+          {{ assignment.subjectName }} · {{ assignment.className }} · due
+          {{ assignment.deadline | date: 'full' }}
+        </p>
+      </div>
+      <a class="btn btn-ghost" routerLink="/student/assignments">Back</a>
+    </div>
+
+    <div class="card">
+      <p>{{ assignment.description }}</p>
+      <p class="muted">Maximum marks: {{ assignment.maximumMarks | number: '1.0-2' }}</p>
+    </div>
+
+    @if (errorMessage(); as message) {
+      <app-error [message]="message" [retryable]="true" (retry)="load()" />
+    }
+
+    @if (submission(); as submission) {
+      <div class="card">
+        <h3>Your submission</h3>
+        <div class="submission-line">
+          <span class="status" [class]="submission.status | statusClass">{{ submission.status | statusLabel }}</span>
+          @if (submission.submittedAt) {
+            <span class="muted">Submitted {{ submission.submittedAt | date: 'medium' }}</span>
+          }
+          @if (submission.marks !== null) {
+            <span><strong>{{ submission.marks | number: '1.0-2' }}</strong> / {{ assignment.maximumMarks | number: '1.0-2' }}</span>
+          }
+        </div>
+
+        <p>{{ submission.answer }}</p>
+
+        @if (submission.feedback) {
+          <p class="submission-feedback"><strong>Feedback:</strong> {{ submission.feedback }}</p>
+        }
+
+        @if (submission.attachments.length > 0) {
+          <div class="attachments">
+            <span class="field-hint">Attachments:</span>
+            @for (attachment of submission.attachments; track attachment.id) {
+              <button type="button" class="btn btn-small" (click)="onDownloadAttachment(submission, attachment)">
+                {{ attachment.fileName }} ({{ attachment.size | fileSize }})
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    @if (canEdit()) {
+      <form class="card form-card" [formGroup]="form" (ngSubmit)="onSubmit()">
+        <h3>{{ submission() ? 'Update your answer' : 'Submit your answer' }}</h3>
+
+        @if (returned()) {
+          <div class="alert alert-info">Your teacher returned this for revision. You may edit it even though the deadline has passed.</div>
+        }
+
+        <label class="field">
+          <span>Answer</span>
+          <textarea formControlName="answer" rows="6" placeholder="Write your answer here."></textarea>
+          @if (fieldHasError()) {
+            <span class="field-error">Answer is required and at most 8000 characters.</span>
+          }
+        </label>
+
+        <label class="field">
+          <span>Attachment (optional, up to 10 MB)</span>
+          <input type="file" (change)="onFileSelected($event)" />
+        </label>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ saving() ? 'Saving…' : submission() ? 'Update answer' : 'Submit answer' }}
+          </button>
+        </div>
+      </form>
+    } @else if (!graded()) {
+      @if (pastDeadline()) {
+        <div class="alert alert-warning">The deadline has passed, so the answer is locked.</div>
+      }
+    }
+  } @else if (loading()) {
+    <app-loading />
+  }
+</section>

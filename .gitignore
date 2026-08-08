@@ -427,3 +427,36 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# ---------------------------------------------------------------------------
+# Assignment & Submission Management System - project specific
+# ---------------------------------------------------------------------------
+
+# Secrets. NEVER commit a real .env - only .env.example belongs in git.
+.env
+.env.*
+!.env.example
+
+# Local developer overrides that may contain connection strings
+appsettings.Development.local.json
+appsettings.*.local.json
+
+# Uploaded submission attachments (runtime data, lives on a Docker volume)
+uploads/
+src/AssignmentManagement.Api/uploads/
+
+# Angular
+frontend/**/node_modules/
+frontend/**/dist/
+frontend/**/.angular/
+frontend/**/coverage/
+
+# Test output
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.cobertura.xml
+
+# Docker local state
+docker/**/data/

@@ -1,0 +1,26 @@
+.login-page {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 24rem;
+  padding: 2rem;
+}
+
+.login-card h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.login-subtitle {
+  margin: 0.25rem 0 1.5rem;
+  color: var(--color-text-muted);
+}
+
+.login-card .btn-block {
+  padding-top: 0.75rem;
+}
