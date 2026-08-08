@@ -21,6 +21,11 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
+# The user that runs the setup (via sudo) is the one that deploys later: the pipeline
+# SCPs files into $APP_DIR and runs docker compose, so that user needs write access to
+# the app directory and membership in the docker group (effective on the next SSH login).
+APP_OWNER="${SUDO_USER:-$(logname 2>/dev/null || echo root)}"
+
 # ---- Docker + compose plugin -------------------------------------------------
 if ! command -v docker >/dev/null 2>&1; then
   echo "Installing Docker..."
@@ -31,9 +36,16 @@ systemctl enable --now docker
 systemctl enable --now containerd
 docker compose version
 
+if [[ "$APP_OWNER" != "root" ]]; then
+  usermod -aG docker "$APP_OWNER"
+fi
+
 # ---- App directory ------------------------------------------------------------
+# /opt is root-owned, so hand the app directory to the deploying user - otherwise the
+# CI pipeline cannot SCP docker-compose.prod.yml into it.
 mkdir -p "$APP_DIR"
 mkdir -p "$APP_DIR/uploads"
+chown -R "$APP_OWNER:$APP_OWNER" "$APP_DIR"
 chmod 755 "$APP_DIR"
 
 # ---- .env ----------------------------------------------------------------------
