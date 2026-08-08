@@ -228,7 +228,11 @@ docker/backend.Dockerfile               Multi-stage .NET 10 API image (restore -
 docker/frontend.Dockerfile              Multi-stage Angular image (node build -> nginx)
 docker/frontend/nginx.conf              Serves the SPA and proxies /api to the API
 docker-compose.yml                      postgres + api + frontend with health checks
+docker-compose.prod.yml                 production stack for AWS EC2 (GHCR images)
 .env.example                            Environment template (DB, JWT, ports) - never commit .env
+.github/workflows/ci-cd.yml             CI (build/test) + CD (GHCR images -> SSH deploy)
+deploy/ec2-setup.sh                     one-time EC2 bootstrap (Docker + .env generation)
+deploy/ec2-update.sh                    remote deploy step (pull images + health wait)
 docs/IMPLEMENTATION_PLAN.md             Design, database schema and phase-by-phase plan
 ```
 
@@ -337,6 +341,102 @@ The seeder creates these development-only accounts:
 
 The student belongs to a seeded class with a published assignment and a sample
 submission, so each role has something to work with on first login.
+
+---
+
+## Deploying to AWS (CI/CD)
+
+The repo ships with a GitHub Actions pipeline that builds and tests every push, then
+deploys automatically to a single EC2 host running the same Docker Compose stack as
+local development.
+
+### How it works
+
+```text
+push to main ─► GitHub Actions
+                 ├─ ci     : dotnet build + 198 tests (against a real PostgreSQL
+                 │          service container) + Angular production build
+                 └─ deploy : build api + frontend images, push to GHCR
+                             (ghcr.io/sojib444/onnorokom/{api,frontend}),
+                             then SSH to EC2 and run docker compose up
+```
+
+- **`docker-compose.prod.yml`** is the production stack. It pulls prebuilt images
+  from GHCR (no build context on the server), reads configuration from
+  `/opt/onnorokom/.env`, maps nginx to port 80, and keeps the API on a loopback-only
+  port so only the frontend is internet-facing.
+- **Migrations and seeding** run on API startup (`Program.cs`), so a deploy is just
+  "pull the new image and restart". The database and uploads live on persistent
+  volumes that survive redeploys.
+- **Rollback** = redeploy the previous `main` commit (or run
+  `docker compose -f docker-compose.prod.yml up -d` with the older image tag).
+
+### One-time setup
+
+**1. EC2 instance** (Ubuntu 24.04, any size; open **TCP 80** in the security group):
+
+- When launching the instance, create a **key pair** and download the `.pem` file —
+  this is the SSH identity the pipeline uses to deploy (e.g.
+  `home_barud_aws_dev.pem`). Store it somewhere safe, outside the repo.
+- **Windows note:** Windows OpenSSH rejects a private key it considers
+  "UNPROTECTED" until the file grants access only to your user. Fix it once with:
+
+  ```powershell
+  icacls.exe home_barud_aws_dev.pem /inheritance:r
+  icacls.exe home_barud_aws_dev.pem /grant:r "$($env:USERDOMAIN)\$($env:USERNAME):R"
+  ```
+
+  (run an elevated shell if the file's ACL is locked by another machine's SID).
+  The connection can then be tested with
+  `ssh -i home_barud_aws_dev.pem ubuntu@<EC2-PUBLIC-IP>`.
+
+```bash
+# SSH in, then bootstrap the host once:
+sudo bash deploy/ec2-setup.sh
+```
+
+The script installs Docker, creates `/opt/onnorokom`, and generates a strong `.env`
+(random Postgres password and JWT secret). If the GitHub repo is **private**, also add
+`GHCR_USER` and `GHCR_TOKEN` (fine-grained PAT with `read:packages`) to
+`/opt/onnorokom/.env` so the host can pull the images.
+
+**2. GitHub repository secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `AWS_EC2_HOST` | public IP or DNS of the EC2 instance |
+| `AWS_EC2_USER` | SSH user, usually `ubuntu` |
+| `AWS_EC2_SSH_KEY` | the **entire contents** of the key pair's `.pem` file (e.g. `home_barud_aws_dev.pem`), pasted as the value |
+| `AWS_EC2_PORT` | SSH port (optional, defaults to 22) |
+
+**3. Push to `main`.** The pipeline runs CI, builds both images, pushes them to
+GitHub Container Registry, copies `docker-compose.prod.yml` and
+`deploy/ec2-update.sh` to the host, and starts the stack. The app is then live at
+`http://<EC2-PUBLIC-IP>/`.
+
+### Day-to-day operations
+
+```bash
+# On the EC2 host, from /opt/onnorokom:
+docker compose -f docker-compose.prod.yml ps             # status incl. health
+docker compose -f docker-compose.prod.yml logs -f api    # API logs
+docker compose -f docker-compose.prod.yml logs -f frontend
+docker compose -f docker-compose.prod.yml down           # stop (volumes kept)
+docker compose -f docker-compose.prod.yml down -v        # stop + wipe db/uploads
+```
+
+A health check probes `http://127.0.0.1:5105/health` on the host; the deploy fails
+loudly (with API logs) if it does not pass. See `deploy/ec2-update.sh`.
+
+### Not yet covered (deliberately)
+
+- **HTTPS** — the frontend currently serves plain HTTP on :80. Add nginx TLS (e.g.
+  Let's Encrypt via certbot) in front of the frontend service before exposing real
+  student data.
+- **Multi-instance scaling** — uploads are a node-local volume; a second host needs
+  object storage (S3) behind `IFileStorage`.
+- **Backups** — the Postgres volume is not snapshotted automatically. Add a nightly
+  `pg_dump` to S3 (or move to RDS) for real data.
 
 ---
 
