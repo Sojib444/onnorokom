@@ -25,6 +25,7 @@
   height: 1.4rem;
   border-radius: 0.4rem;
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  flex-shrink: 0;
 }
 
 .nav {
@@ -81,19 +82,142 @@
   padding: 1.5rem;
 }
 
+/* Hamburger toggle: hidden on desktop, shown once the nav collapses. */
+.menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.28rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 0.45rem;
+  background: var(--color-surface);
+  cursor: pointer;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.menu-toggle-bar {
+  display: block;
+  height: 2px;
+  width: 1.2rem;
+  margin: 0 auto;
+  background: var(--color-text);
+  border-radius: 1px;
+}
+
+.user-mobile {
+  display: none;
+}
+
+.nav-drawer-header,
+.nav-close,
+.nav-backdrop {
+  display: none;
+}
+
 @media (max-width: 760px) {
   .topbar {
-    flex-wrap: wrap;
-    gap: 0.75rem;
+    padding: 0.75rem 1rem;
   }
 
-  .nav {
-    order: 3;
-    flex-basis: 100%;
-    overflow-x: auto;
+  .menu-toggle {
+    display: flex;
   }
 
-  .user-name {
+  .user-desktop {
     display: none;
+  }
+
+  /* Nav becomes an off-canvas drawer that slides in from the right, closed by default. */
+  .nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    width: 82%;
+    max-width: 20rem;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 0.15rem;
+    background: var(--color-surface);
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
+    padding: 1rem;
+    overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+  }
+
+  .nav.nav-open {
+    transform: translateX(0);
+  }
+
+  .nav-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .nav-drawer-title {
+    font-weight: 700;
+  }
+
+  .nav-close {
+    display: block;
+    width: 2rem;
+    height: 2rem;
+    border: none;
+    background: transparent;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: var(--color-text-muted);
+    cursor: pointer;
+  }
+
+  .nav-link {
+    padding: 0.6rem 0.5rem;
+  }
+
+  .user-mobile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Dims the rest of the page while the drawer is open. */
+  .nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: rgba(17, 24, 39, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .nav-backdrop.nav-backdrop-open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .content {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 0.75rem;
   }
 }

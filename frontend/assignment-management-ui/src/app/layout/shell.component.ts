@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth/auth.service';
 
@@ -52,6 +52,9 @@ export class ShellComponent {
   readonly currentUser = this.auth.currentUser;
   readonly role = this.auth.role;
 
+  /** Whether the mobile navigation drawer is open. Desktop layout ignores this. */
+  readonly menuOpen = signal(false);
+
   /**
    * Navigation entries for the signed-in role. Every role array is merged and filtered
    * by the current role; the common Dashboard entry lives only in COMMON_NAV so it is
@@ -65,5 +68,15 @@ export class ShellComponent {
 
   onLogout(): void {
     this.auth.logout();
+  }
+
+  /** Toggles the mobile navigation drawer open/closed. */
+  toggleMenu(): void {
+    this.menuOpen.update((open) => !open);
+  }
+
+  /** Closes the mobile navigation drawer, e.g. after a link is followed. */
+  closeMenu(): void {
+    this.menuOpen.set(false);
   }
 }

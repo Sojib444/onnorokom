@@ -1,23 +1,55 @@
 <header class="topbar">
-  <a class="brand" routerLink="/dashboard">
+  <a class="brand" routerLink="/dashboard" (click)="closeMenu()">
     <span class="brand-mark" aria-hidden="true"></span>
     Assignment Manager
   </a>
 
-  <nav class="nav" aria-label="Main navigation">
+  <button
+    type="button"
+    class="menu-toggle"
+    (click)="toggleMenu()"
+    [attr.aria-expanded]="menuOpen()"
+    aria-label="Toggle navigation menu"
+    aria-controls="main-nav"
+  >
+    <span class="menu-toggle-bar"></span>
+    <span class="menu-toggle-bar"></span>
+    <span class="menu-toggle-bar"></span>
+  </button>
+
+  <nav id="main-nav" class="nav" [class.nav-open]="menuOpen()" aria-label="Main navigation">
+    <div class="nav-drawer-header">
+      <span class="nav-drawer-title">Menu</span>
+      <button type="button" class="nav-close" (click)="closeMenu()" aria-label="Close navigation menu">
+        &times;
+      </button>
+    </div>
+
     @for (entry of navEntries(); track entry.path) {
       <a
         class="nav-link"
         routerLink="{{ entry.path }}"
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: entry.path === '/dashboard' }"
+        (click)="closeMenu()"
       >
         {{ entry.label }}
       </a>
     }
+
+    <div class="user user-mobile">
+      @if (currentUser(); as user) {
+        <span class="user-name">{{ user.fullName }}</span>
+        <span class="user-role">{{ user.role }}</span>
+      }
+      <button type="button" class="btn btn-ghost btn-block" (click)="onLogout()">Sign out</button>
+    </div>
   </nav>
 
-  <div class="user">
+  <!-- Dims the page and closes the drawer when tapped, mobile only. -->
+  <div class="nav-backdrop" [class.nav-backdrop-open]="menuOpen()" (click)="closeMenu()"></div>
+
+  <div class="user user-desktop">
     @if (currentUser(); as user) {
       <span class="user-name">{{ user.fullName }}</span>
       <span class="user-role">{{ user.role }}</span>
