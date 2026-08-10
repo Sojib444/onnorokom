@@ -35,7 +35,7 @@ submission, so every role has something real to click on at first login.
 ## Why this project stands out
 
 - **Full-stack, end-to-end.** Domain model, REST API, SPA, database, tests,
-  containerization and cloud deployment — one coherent system, not a toy.
+  containerization and cloud deployment — one coherent system.
 - **Serious engineering structure.** Clean Architecture with a dependency rule the
   compiler enforces, CQRS via MediatR, and business rules that live in domain entities
   instead of leaking into controllers.
